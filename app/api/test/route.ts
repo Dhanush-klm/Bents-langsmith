@@ -1,19 +1,30 @@
 import { OpenAI } from "openai";
+import { traceable } from "langsmith/traceable";
+import { wrapOpenAI } from "langsmith/wrappers";
+import { AISDKExporter } from 'langsmith/vercel';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { AISDKExporter } from 'langsmith/vercel';
 
 export const runtime = 'edge';
 
 export async function GET() {
   try {
-    const result = await streamText({
-      model: openai('gpt-4o-mini'),
-      messages: [{ role: "user", content: "what is Dhanush?" }],
-      experimental_telemetry: AISDKExporter.getSettings(),
+    const pipeline = traceable(async (user_input: string) => {
+      const result = await streamText({
+        model: openai('gpt-4o-mini'),
+        messages: [{ role: "user", content: user_input }],
+        experimental_telemetry: AISDKExporter.getSettings({
+          runName: 'test-completion',
+          metadata: { endpoint: 'test' }
+        })
+      });
+      return result;
+    }, {
+      name: 'test-pipeline'
     });
 
-    return result.toDataStreamResponse();
+    const response = await pipeline("what is mac?");
+    return response.toDataStreamResponse();
 
   } catch (error) {
     console.error('Test route error:', error);
@@ -24,4 +35,4 @@ export async function GET() {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-} 
+}
