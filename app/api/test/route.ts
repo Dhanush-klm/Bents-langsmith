@@ -1,30 +1,19 @@
 import { OpenAI } from "openai";
-import { traceable } from "langsmith/traceable";
-import { wrapOpenAI } from "langsmith/wrappers";
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { AISDKExporter } from 'langsmith/vercel';
 
 export const runtime = 'edge';
 
 export async function GET() {
   try {
-    const client = wrapOpenAI(new OpenAI({ apiKey: process.env.OPENAI_API_KEY }));
-    
-    const pipeline = traceable(async (user_input: string) => {
-      const result = await client.chat.completions.create({
-        messages: [{ role: "user", content: user_input }],
-        model: "gpt-4o-mini",
-        temperature: 0
-      });
-      return result.choices[0].message.content;
+    const result = await streamText({
+      model: openai('gpt-4o-mini'),
+      messages: [{ role: "user", content: "what is Dhanush?" }],
+      experimental_telemetry: AISDKExporter.getSettings(),
     });
 
-    const response = await pipeline("what is LLM?");
-    
-    return new Response(JSON.stringify({ 
-      message: "Test successful", 
-      response: response 
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return result.toDataStreamResponse();
 
   } catch (error) {
     console.error('Test route error:', error);
