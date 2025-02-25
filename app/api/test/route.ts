@@ -17,7 +17,7 @@ export async function GET() {
       return result.choices[0].message.content;
     });
 
-    const response = await pipeline("Hello, world!");
+    const response = await pipeline("what is LLM?");
     
     return new Response(JSON.stringify({ 
       message: "Test successful", 
